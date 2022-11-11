@@ -8,19 +8,19 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func InitMongo(dsn string) (client *mongo.Client, err error) {
+func InitMongo(dsn string) (client *mongo.Client, clientOps *options.ClientOptions, err error) {
 	if !strings.HasPrefix(dsn, "mongodb://") {
 		dsn = "mongodb://" + dsn
 	}
 
-	clientOptions := options.Client().ApplyURI(dsn)
+	clientOps = options.Client().ApplyURI(dsn)
 
-	err = clientOptions.Validate()
+	err = clientOps.Validate()
 	if err != nil {
 		return
 	}
 
-	client, err = mongo.Connect(context.Background(), clientOptions)
+	client, err = mongo.Connect(context.Background(), clientOps)
 
 	return
 }

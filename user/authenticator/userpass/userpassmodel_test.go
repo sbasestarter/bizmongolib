@@ -9,7 +9,7 @@ import (
 )
 
 func TestMongoUserPasswordManagerImpl_AddUser(t *testing.T) {
-	cli, err := mongolib.InitMongo("mongodb://mongo_default_user:mongo_default_pass@127.0.0.1:8309/my_db")
+	cli, _, err := mongolib.InitMongo("mongodb://mongo_default_user:mongo_default_pass@127.0.0.1:8309/my_db")
 	assert.Nil(t, err)
 	assert.NotNil(t, cli)
 

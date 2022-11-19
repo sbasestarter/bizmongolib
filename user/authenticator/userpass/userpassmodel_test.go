@@ -50,4 +50,13 @@ func TestMongoUserPasswordManagerImpl_AddUser(t *testing.T) {
 	us, err := m2.ListUsers(context.TODO())
 	assert.Nil(t, err)
 	assert.EqualValues(t, 2, len(us))
+
+	err = m2.UpdateUserExData(context.TODO(), u.ID, "k1", []byte("abcd"))
+	assert.Nil(t, err)
+
+	err = m2.UpdateUserExData(context.TODO(), u.ID, "k2", []byte("efgh"))
+	assert.Nil(t, err)
+
+	err = m2.UpdateUserExData(context.TODO(), u.ID, "k1", []byte("x"))
+	assert.Nil(t, err)
 }

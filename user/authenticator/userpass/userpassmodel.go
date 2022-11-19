@@ -126,6 +126,7 @@ func (impl *mongoUserPasswordModelImpl) ListUsers(ctx context.Context) (users []
 			UserName: u.UserName,
 			Password: u.Password,
 			CreateAt: u.CreateAt,
+			ExData:   u.ExData,
 		})
 	}
 
@@ -145,7 +146,51 @@ func (impl *mongoUserPasswordModelImpl) findUserOne(ctx context.Context, m bson.
 		UserName: u.UserName,
 		Password: u.Password,
 		CreateAt: u.CreateAt,
+		ExData:   u.ExData,
 	}
+
+	return
+}
+
+func (impl *mongoUserPasswordModelImpl) UpdateUserExData(ctx context.Context, userID uint64, key string, val interface{}) (err error) {
+	var u User
+
+	err = impl.collection.FindOne(ctx, bson.M{
+		"_id": userID,
+	}).Decode(&u)
+	if err != nil {
+		return
+	}
+
+	if len(u.ExData) == 0 {
+		u.ExData = make(map[string]interface{})
+	}
+
+	u.ExData[key] = val
+
+	update := bson.M{
+		"ex_data": u.ExData,
+	}
+
+	err = impl.collection.FindOneAndUpdate(ctx, bson.M{
+		"_id": userID,
+	}, bson.M{
+		"$set": update,
+	}).Err()
+
+	return
+}
+
+func (impl *mongoUserPasswordModelImpl) UpdateUserAllExData(ctx context.Context, userID uint64, exData map[string]interface{}) (err error) {
+	update := bson.M{
+		"ex_data": exData,
+	}
+
+	err = impl.collection.FindOneAndUpdate(ctx, bson.M{
+		"_id": userID,
+	}, bson.M{
+		"$set": update,
+	}).Err()
 
 	return
 }

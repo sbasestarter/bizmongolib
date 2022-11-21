@@ -62,14 +62,14 @@ func (m *mongoModelImpl) CreateTalk(ctx context.Context, talkInfo *talkinters.Ta
 	return
 }
 
-func (m *mongoModelImpl) OpenTalk(ctx context.Context, talkID string) (err error) {
-	return m.updateTalkInfo(ctx, talkID, bson.M{
+func (m *mongoModelImpl) OpenTalk(ctx context.Context, actIDs, bizIDs []string, talkID string) (err error) {
+	return m.updateTalkInfo(ctx, actIDs, bizIDs, talkID, bson.M{
 		"Status": talkinters.TalkStatusOpened,
 	})
 }
 
-func (m *mongoModelImpl) CloseTalk(ctx context.Context, talkID string) (err error) {
-	return m.updateTalkInfo(ctx, talkID, bson.M{
+func (m *mongoModelImpl) CloseTalk(ctx context.Context, actIDs, bizIDs []string, talkID string) (err error) {
+	return m.updateTalkInfo(ctx, actIDs, bizIDs, talkID, bson.M{
 		"Status": talkinters.TalkStatusClosed,
 	})
 }
@@ -97,16 +97,16 @@ func (m *mongoModelImpl) GetTalkMessages(ctx context.Context, talkID string, off
 	return
 }
 
-func (m *mongoModelImpl) QueryTalks(ctx context.Context, creatorID, serviceID uint64, talkID string,
+func (m *mongoModelImpl) QueryTalks(ctx context.Context, actIDs, bizIDs []string, creatorID, serviceID uint64, talkID string,
 	statuses []talkinters.TalkStatus) (talks []*talkinters.TalkInfoR, err error) {
-	return m.queryTalksEx(ctx, creatorID, serviceID, talkID, statuses, nil)
+	return m.queryTalksEx(ctx, actIDs, bizIDs, creatorID, serviceID, talkID, statuses, nil)
 }
 
-func (m *mongoModelImpl) GetPendingTalkInfos(ctx context.Context) ([]*talkinters.TalkInfoR, error) {
+func (m *mongoModelImpl) GetPendingTalkInfos(ctx context.Context, actIDs, bizIDs []string) ([]*talkinters.TalkInfoR, error) {
 	bsonM := bson.M{}
 	bsonM["ServiceID"] = 0
 
-	talkInfos, err := m.queryTalksEx(ctx, 0, 0, "", []talkinters.TalkStatus{talkinters.TalkStatusOpened}, bsonM)
+	talkInfos, err := m.queryTalksEx(ctx, actIDs, bizIDs, 0, 0, "", []talkinters.TalkStatus{talkinters.TalkStatusOpened}, bsonM)
 	if err != nil {
 		return nil, err
 	}
@@ -114,8 +114,8 @@ func (m *mongoModelImpl) GetPendingTalkInfos(ctx context.Context) ([]*talkinters
 	return talkInfos, nil
 }
 
-func (m *mongoModelImpl) UpdateTalkServiceID(ctx context.Context, talkID string, serviceID uint64) (err error) {
-	return m.updateTalkInfo(ctx, talkID, bson.M{
+func (m *mongoModelImpl) UpdateTalkServiceID(ctx context.Context, actIDs, bizIDs []string, talkID string, serviceID uint64) (err error) {
+	return m.updateTalkInfo(ctx, actIDs, bizIDs, talkID, bson.M{
 		"ServiceID": serviceID,
 	})
 }
@@ -124,8 +124,20 @@ func (m *mongoModelImpl) UpdateTalkServiceID(ctx context.Context, talkID string,
 //
 //
 
-func (m *mongoModelImpl) queryTalkFilter(creatorID, serviceID uint64, talkID string, statuses []talkinters.TalkStatus) (filter bson.M, err error) {
+func (m *mongoModelImpl) queryTalkFilter(actIDs, bizIDs []string, creatorID, serviceID uint64, talkID string, statuses []talkinters.TalkStatus) (filter bson.M, err error) {
 	filter = bson.M{}
+	if len(actIDs) > 0 {
+		filter["ActID"] = bson.M{
+			"$in": actIDs,
+		}
+	}
+
+	if len(bizIDs) > 0 {
+		filter["BizID"] = bson.M{
+			"$in": bizIDs,
+		}
+	}
+
 	if creatorID > 0 {
 		filter["CreatorID"] = creatorID
 	}
@@ -154,11 +166,11 @@ func (m *mongoModelImpl) queryTalkFilter(creatorID, serviceID uint64, talkID str
 	return
 }
 
-func (m *mongoModelImpl) queryTalksEx(ctx context.Context, creatorID, serviceID uint64, talkID string,
+func (m *mongoModelImpl) queryTalksEx(ctx context.Context, actIDs, bizIDs []string, creatorID, serviceID uint64, talkID string,
 	statuses []talkinters.TalkStatus, bsonM bson.M) (talks []*talkinters.TalkInfoR, err error) {
 	collection := m.mongoCli.Database(m.clientOps.Auth.AuthSource).Collection(collectionTalkInfo)
 
-	filter, err := m.queryTalkFilter(creatorID, serviceID, talkID, statuses)
+	filter, err := m.queryTalkFilter(actIDs, bizIDs, creatorID, serviceID, talkID, statuses)
 	if err != nil {
 		err = commerr.ErrInvalidArgument
 
@@ -179,16 +191,16 @@ func (m *mongoModelImpl) queryTalksEx(ctx context.Context, creatorID, serviceID 
 	return
 }
 
-func (m *mongoModelImpl) updateTalkInfo(ctx context.Context, talkID string, updateMap bson.M) (err error) {
-	objectID, err := primitive.ObjectIDFromHex(talkID)
+func (m *mongoModelImpl) updateTalkInfo(ctx context.Context, actIDs, bizIDs []string, talkID string, updateMap bson.M) (err error) {
+	filter, err := m.queryTalkFilter(actIDs, bizIDs, 0, 0, talkID, nil)
 	if err != nil {
+		err = commerr.ErrInvalidArgument
+
 		return
 	}
 
 	r := m.mongoCli.Database(m.clientOps.Auth.AuthSource).Collection(collectionTalkInfo).FindOneAndUpdate(ctx,
-		bson.M{
-			"_id": objectID,
-		}, bson.M{
+		filter, bson.M{
 			"$set": updateMap,
 		})
 

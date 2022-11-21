@@ -3,7 +3,7 @@ module github.com/sbasestarter/bizmongolib
 go 1.19
 
 require (
-	github.com/sbasestarter/bizinters v0.0.2
+	github.com/sbasestarter/bizinters v0.0.3
 	github.com/sgostarter/i v0.1.13
 	github.com/stretchr/testify v1.7.1
 	go.mongodb.org/mongo-driver v1.10.3

@@ -33,6 +33,8 @@ func Test1(t *testing.T) {
 		Title:     "testTalk1",
 		StartAt:   time.Now().Unix(),
 		CreatorID: 1,
+		ActID:     "act1",
+		BizID:     "biz1",
 	})
 	assert.Nil(t, err)
 	t.Log(talkID)
@@ -77,25 +79,25 @@ func Test1(t *testing.T) {
 	assert.EqualValues(t, 2, len(messages))
 	assert.EqualValues(t, "talk_message_3", messages[1].Text)
 
-	err = m.CloseTalk(ctx, talkID)
+	err = m.CloseTalk(ctx, []string{"act1"}, []string{"biz1"}, talkID)
 	assert.Nil(t, err)
 
-	err = m.OpenTalk(ctx, talkID)
+	err = m.OpenTalk(ctx, []string{"act1"}, []string{"biz1"}, talkID)
 	assert.Nil(t, err)
 
-	err = m.OpenTalk(ctx, talkID[0:len(talkID)-1]+"9")
+	err = m.OpenTalk(ctx, []string{"act1"}, []string{"biz1"}, talkID[0:len(talkID)-1]+"9")
 	assert.NotNil(t, err)
 
-	talks, err := m.QueryTalks(ctx, 1, 0, "", nil)
+	talks, err := m.QueryTalks(ctx, []string{"act1"}, []string{"biz1"}, 1, 0, "", nil)
 	assert.Nil(t, err)
 	assert.EqualValues(t, 1, len(talks))
 	assert.EqualValues(t, talkinters.TalkStatusOpened, talks[0].Status)
 
-	talks, err = m.QueryTalks(ctx, 1, 0, "", []talkinters.TalkStatus{talkinters.TalkStatusOpened})
+	talks, err = m.QueryTalks(ctx, []string{"act1"}, []string{"biz1"}, 1, 0, "", []talkinters.TalkStatus{talkinters.TalkStatusOpened})
 	assert.Nil(t, err)
 	assert.EqualValues(t, 1, len(talks))
 
-	talks, err = m.QueryTalks(ctx, 1, 0, "", []talkinters.TalkStatus{talkinters.TalkStatusClosed})
+	talks, err = m.QueryTalks(ctx, []string{"act1"}, []string{"biz1"}, 1, 0, "", []talkinters.TalkStatus{talkinters.TalkStatusClosed})
 	assert.Nil(t, err)
 	assert.EqualValues(t, 0, len(talks))
 }
